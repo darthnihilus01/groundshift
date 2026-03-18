@@ -1,4 +1,4 @@
-# 🛰️ groundshift — satellite change detection, for real this time
+# 🛰️ groundshift — satellite change detection
 
 **Watch any place on Earth. Get alerted when something changes.**
 
