@@ -10,13 +10,13 @@ groundshift is an open-source Python framework that turns free satellite imagery
 
 ## 🌍 The Problem
 
-Free satellite data? ✅  
-Published ML models? ✅  
-A coherent, pip-installable pipeline that connects them? ❌
+The availability of free, high-resolution satellite imagery has grown significantly — yet the tooling to extract meaningful intelligence from it has not kept pace.
 
-Every team that needs change detection today builds the same messy pipeline from scratch — wrong tile formats, broken co-registration, cloud cover silently destroying scores, research repos nobody maintains. It's weeks of plumbing before any actual science happens.
+Existing open-source change detection approaches operate on a binary model: a region either changed or it didn't. This is insufficient for real-world monitoring. Surface conditions vary seasonally, cyclically, and in response to weather — a change that is completely normal in one month may indicate a serious anomaly in another. Without an understanding of historical baseline behaviour, binary detection produces noise, not insight.
 
-groundshift is the plumbing. So you don't have to be.
+What's missing is a system that doesn't just detect change, but contextualises it — one that continuously monitors a defined area of interest, models its expected behaviour over time, and flags deviations that fall outside that norm as anomalies.
+
+groundshift is being built to fill that gap.
 
 ---
 
