@@ -1,0 +1,296 @@
+GROUNDSHIFT INGESTION LAYER REPORT
+Date: 2026-03-19
+
+Overview
+This report documents the ingestion-layer files that were created for groundshift, explains what each file does, how the code works block-by-block, why key design decisions were made, and how files connect to one another.
+
+=================================================================
+1) pyproject.toml
+=================================================================
+
+1. File job in the project
+This file defines project metadata, packaging, dependencies, CLI entry points, and test tooling configuration.
+
+2. Code walkthrough
+- [build-system]
+  Declares setuptools and wheel as build requirements and uses setuptools.build_meta.
+- [project]
+  Sets package identity and metadata:
+  - name: groundshift
+  - version: 0.1.0
+  - description/readme/license/authors
+  - requires-python: >=3.10
+  - dependencies: typer
+- [project.optional-dependencies]
+  - ingestion: sentinelsat
+  - dev: pytest
+- [project.scripts]
+  Registers CLI command:
+  - groundshift = groundshift.cli.main:app
+- [tool.pytest.ini_options]
+  Sets default test discovery path to tests.
+- [tool.setuptools] and [tool.setuptools.packages.find]
+  Enables package discovery for groundshift modules.
+
+3. Design decisions
+- Optional dependency groups keep base installation smaller.
+- Explicit script entry point standardizes CLI usage.
+- Python version floor prevents accidental use on unsupported interpreters.
+
+4. Connections
+- Exposes CLI app in groundshift/cli/main.py.
+- Makes package modules under groundshift installable/importable.
+- Configures test discovery for tests/test_ingestion_service.py.
+
+=================================================================
+2) groundshift/__init__.py
+=================================================================
+
+1. File job in the project
+Marks groundshift as a Python package.
+
+2. Code walkthrough
+- A minimal package docstring only.
+
+3. Design decisions
+- Kept intentionally minimal to avoid locking a public API too early.
+
+4. Connections
+- Allows imports like groundshift.core.ingestion.service.
+- Required for package structure under setuptools discovery.
+
+=================================================================
+3) core/ingestion/models.py
+=================================================================
+
+1. File job in the project
+Defines ingestion-layer data contracts shared across providers, service orchestration, CLI, and tests.
+
+2. Code walkthrough
+- SceneSummary dataclass
+  Represents catalog metadata before download:
+  - scene_id, title, acquired_at, cloud_cover
+  - optional footprint_wkt, relative_orbit, tile_id
+  - product_type and platform_name defaults
+- DownloadedScene dataclass
+  Links a SceneSummary to a local downloaded path.
+- IngestionRequest dataclass
+  Captures ingestion inputs:
+  - aoi_wkt, start_date, end_date
+  - max_cloud_cover default 20.0
+  - limit default 20
+- IngestionResult dataclass
+  Captures full structured output:
+  - requested input
+  - matched_scenes
+  - downloaded_scenes
+
+3. Design decisions
+- Dataclasses provide explicit typing and easy serialization.
+- Separating request/result/scene types improves clarity and testability.
+- Keeping footprint/orbit/tile metadata supports future geospatial QA and preprocessing logic.
+
+4. Connections
+- Built/consumed by service in core/ingestion/service.py.
+- Produced by provider in core/ingestion/providers/sentinelsat_provider.py.
+- Serialized in CLI output in cli/main.py.
+- Used directly by tests.
+
+=================================================================
+4) core/ingestion/cache.py
+=================================================================
+
+1. File job in the project
+Provides a local cache utility for organizing downloaded scenes by scene id.
+
+2. Code walkthrough
+- TileCache class
+- __init__(root)
+  Stores root path and creates the directory if needed.
+- scene_dir(scene_id)
+  Sanitizes scene id for filesystem safety and creates/returns scene directory.
+- existing_files(scene_id)
+  Returns existing files under the scene directory recursively.
+
+3. Design decisions
+- Isolates filesystem concerns from provider logic.
+- Deterministic scene-id layout simplifies cache reuse.
+
+4. Connections
+- Instantiated by IngestionService.
+- Passed to provider.download_scenes.
+- Used by sentinelsat provider for cache-hit checks and destination paths.
+
+=================================================================
+5) core/ingestion/providers/base.py
+=================================================================
+
+1. File job in the project
+Defines the abstract provider interface for catalog search and product download.
+
+2. Code walkthrough
+- SceneProvider abstract base class
+- search_scenes(...)
+  Must return a list of SceneSummary for AOI/date/cloud/limit criteria.
+- download_scenes(...)
+  Must download selected scenes into cache and return DownloadedScene list.
+
+3. Design decisions
+- Enforces pluggable backend architecture.
+- Keeps service independent of specific external APIs.
+
+4. Connections
+- Implemented by SentinelSatProvider.
+- Injected into IngestionService.
+- Mocked by FakeProvider in tests.
+
+=================================================================
+6) core/ingestion/providers/sentinelsat_provider.py
+=================================================================
+
+1. File job in the project
+Concrete SceneProvider implementation backed by sentinelsat for Sentinel-2 L2A ingestion.
+
+2. Code walkthrough
+- SentinelSatProvider class
+  Docstring records geospatial caution: footprints may span different UTM zones.
+- __init__(username, password, api_url)
+  Lazy-imports SentinelAPI and initializes authenticated API client.
+  Raises RuntimeError with install hint if sentinelsat is unavailable.
+- search_scenes(...)
+  Calls API query with:
+  - AOI WKT
+  - date range
+  - platform Sentinel-2
+  - product type S2MSI2A
+  - cloudcoverpercentage threshold
+  Parses metadata and normalizes fields into SceneSummary objects.
+  Sorts results by acquisition date descending and applies limit.
+- download_scenes(scenes, cache)
+  For each scene:
+  - if cached files already exist: reuse first file path
+  - else download into scene cache directory
+  - validate returned download path and build DownloadedScene
+
+3. Design decisions
+- Lazy dependency import improves resilience when optional extras are not installed.
+- Cache-first behavior avoids redundant network downloads.
+- Metadata normalization handles minor API field variation.
+
+4. Connections
+- Implements interface from providers/base.py.
+- Called by IngestionService for search/download phases.
+- Constructed by CLI command in cli/main.py.
+- Produces SceneSummary/DownloadedScene model objects.
+
+=================================================================
+7) core/ingestion/service.py
+=================================================================
+
+1. File job in the project
+Coordinates one full ingestion run: validate request, query scenes, download scenes, and return structured result.
+
+2. Code walkthrough
+- IngestionService class
+- __init__(provider, cache_dir)
+  Stores provider and constructs TileCache.
+- ingest(request)
+  Validates:
+  - start_date <= end_date
+  - limit > 0
+  - 0 <= max_cloud_cover <= 100
+  Executes provider.search_scenes and provider.download_scenes.
+  Returns IngestionResult.
+- result_to_dict(result)
+  Converts result dataclasses to plain dict via asdict.
+- parse_iso_date(value)
+  Utility to parse YYYY-MM-DD strings to date objects.
+
+3. Design decisions
+- Service layer centralizes orchestration and guardrails.
+- Provider injection preserves backend pluggability.
+- Validation at service boundary reduces invalid downstream processing.
+
+4. Connections
+- Uses models.py contracts.
+- Uses TileCache from cache.py.
+- Depends on provider abstraction from providers/base.py.
+- Called by cli/main.py.
+- Tested in tests/test_ingestion_service.py.
+
+=================================================================
+8) cli/main.py
+=================================================================
+
+1. File job in the project
+Defines user-facing CLI command for ingestion.
+
+2. Code walkthrough
+- Creates Typer app.
+- ingest command options include:
+  - aoi_wkt, start_date, end_date
+  - max_cloud_cover, limit
+  - cache_dir
+  - username/password (or env vars)
+  - api_url override
+  - output_json destination
+- Command logic:
+  - validates credentials
+  - creates IngestionRequest using parse_iso_date
+  - constructs SentinelSatProvider
+  - constructs IngestionService
+  - runs ingest and serializes result to JSON
+  - writes JSON file if output_json given, otherwise prints to console
+- __main__ guard allows direct execution.
+
+3. Design decisions
+- Typer provides typed options and clear CLI UX.
+- Env-var credential support improves operational usability.
+- JSON output format supports automation and machine consumption.
+
+4. Connections
+- Reads models and service from ingestion package.
+- Instantiates sentinelsat provider.
+- Exported as groundshift command by pyproject.toml script entry.
+
+=================================================================
+9) tests/test_ingestion_service.py
+=================================================================
+
+1. File job in the project
+Unit tests for ingestion service behavior independent of real API/network access.
+
+2. Code walkthrough
+- FakeProvider implements SceneProvider methods for deterministic behavior.
+  - search_scenes records inputs and returns one fixed scene.
+  - download_scenes returns one deterministic local path.
+- ingest_request fixture
+  Provides reusable IngestionRequest baseline.
+- test_ingestion_service_wires_search_and_download
+  Verifies service flow returns expected counts and passes key inputs correctly.
+- test_ingestion_service_rejects_invalid_date_window
+  Verifies ValueError when start_date is after end_date.
+- test_ingestion_service_rejects_cloud_cover_outside_range
+  Verifies ValueError when cloud threshold is out of [0, 100].
+
+3. Design decisions
+- Fake provider keeps tests fast, deterministic, and isolated.
+- Fixture + dataclasses.replace enables concise mutation-based invalid-case tests.
+
+4. Connections
+- Exercises IngestionService directly.
+- Uses models/cache/provider interfaces as test fixtures/contracts.
+- Runs under pytest config declared in pyproject.toml.
+
+=================================================================
+Geospatial Notes (Current Layer)
+=================================================================
+- AOI CRS handling: ingestion currently expects AOI WKT in EPSG:4326 by convention. This should be made explicit and validated in future updates.
+- Scene-level cloud filtering is only coarse prefiltering. Pixel-level cloud masking remains mandatory before any change analysis.
+- Footprints and downstream rasters may involve different CRS/UTM zones; explicit reprojection logic is required in preprocessing.
+
+=================================================================
+Status
+=================================================================
+- Fixture naming conflict in tests was fixed (request -> ingest_request).
+- Ingestion test file currently passes: 3 tests passed.

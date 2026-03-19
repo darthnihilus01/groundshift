@@ -20,6 +20,10 @@ dependencies = [
 ingestion = [
   "sentinelsat>=1.2.1",
 ]
+preprocessing = [
+  "numpy>=1.26.0",
+  "rasterio>=1.3.10",
+]
 dev = [
   "pytest>=8.0.0",
 ]
