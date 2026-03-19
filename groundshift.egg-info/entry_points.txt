@@ -1,0 +1,2 @@
+[console_scripts]
+groundshift = groundshift.cli.main:app

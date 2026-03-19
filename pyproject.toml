@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "groundshift"
+version = "0.1.0"
+description = "Satellite anomaly and pattern change detection framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "groundshift contributors" }
+]
+dependencies = [
+  "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+ingestion = [
+  "sentinelsat>=1.2.1",
+]
+dev = [
+  "pytest>=8.0.0",
+]
+
+[project.scripts]
+groundshift = "groundshift.cli.main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["groundshift*"]
