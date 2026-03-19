@@ -80,12 +80,12 @@ def test_ingestion_service_wires_search_and_download(tmp_path, ingest_request: I
     assert provider.calls[0]["max_cloud_cover"] == 20.0
 
 
-def test_ingestion_service_rejects_invalid_date_window(tmp_path, request: IngestionRequest) -> None:
+def test_ingestion_service_rejects_invalid_date_window(tmp_path, ingest_request: IngestionRequest) -> None:
     provider = FakeProvider()
     service = IngestionService(provider=provider, cache_dir=tmp_path)
 
     bad_request = replace(
-        request,
+        ingest_request,
         start_date=date(2024, 2, 1),
         end_date=date(2024, 1, 1),
     )
@@ -94,10 +94,10 @@ def test_ingestion_service_rejects_invalid_date_window(tmp_path, request: Ingest
         service.ingest(bad_request)
 
 
-def test_ingestion_service_rejects_cloud_cover_outside_range(tmp_path, request: IngestionRequest) -> None:
+def test_ingestion_service_rejects_cloud_cover_outside_range(tmp_path, ingest_request: IngestionRequest) -> None:
     provider = FakeProvider()
     service = IngestionService(provider=provider, cache_dir=tmp_path)
 
-    bad_request = replace(request, max_cloud_cover=120.0)
+    bad_request = replace(ingest_request, max_cloud_cover=120.0)
     with pytest.raises(ValueError, match="max_cloud_cover"):
         service.ingest(bad_request)
