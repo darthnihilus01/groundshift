@@ -24,8 +24,6 @@ groundshift is being built to fill that gap.
 
 Define an area of interest anywhere on Earth. groundshift watches it — automatically pulling fresh Sentinel-2 scenes from ESA's free public archive, preprocessing them, running change detection, and firing an alert when something meaningful shifts.
 
-The smart part: it scores changes against the **historical seasonal baseline** for that exact location. A brown field in October? Normal. A brown field in April? That's an alert.
-
 ---
 
 ## ✨ Features (planned)
@@ -68,13 +66,6 @@ The smart part: it scores changes against the **historical seasonal baseline** f
 
 ---
 
-## 🇮🇳 Why India, why now
-
-ISRO produces incredible satellite data — Resourcesat-2, RISAT-1A, Cartosat-3. And almost none of the existing open-source geospatial tooling supports it natively.
-
-groundshift changes that. If you work in Indian remote sensing research, disaster management, or geospatial tech — this project is built with you in mind.
-
----
 
 ## 🚀 Quickstart (coming soon)
 
@@ -115,17 +106,6 @@ groundshift/
 └── ui/                  # Leaflet.js annotation interface
 ```
 
----
-
-## 🤝 Contributing
-
-This is early — which means your input actually shapes the project.
-
-The most useful thing right now is telling me what you'd use this for. A use case, a dataset format you need, a detector you want to see supported. Open an issue, start a discussion, or just drop a star if this resonates.
-
-Code contributions: the ingestion layer is where to start. Good first issues coming soon — watch the repo.
-
----
 
 ## 🌌 Why this matters
 
