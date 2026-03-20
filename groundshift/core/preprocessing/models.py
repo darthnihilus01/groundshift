@@ -10,6 +10,7 @@ class PreprocessingRequest:
     reference_scene_path: str
     target_scene_path: str
     output_dir: str
+    cloud_cover_threshold: float = 0.4
 
 
 @dataclass(slots=True)
