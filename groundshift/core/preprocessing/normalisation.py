@@ -16,18 +16,20 @@ def _normalise_scene(*, scene_path: str, output_path: Path) -> str:
 
         for band_index in range(scene_data.shape[0]):
             band = scene_data[band_index]
-            valid_pixels = np.isfinite(band)
-            if not np.any(valid_pixels):
+            non_cloud_pixels = band != 0
+            if not np.any(non_cloud_pixels):
                 continue
 
-            band_min = float(np.min(band[valid_pixels]))
-            band_max = float(np.max(band[valid_pixels]))
-            if np.isclose(band_max, band_min):
+            mean = float(np.mean(band[non_cloud_pixels]))
+            std = float(np.std(band[non_cloud_pixels]))
+            if std < 1e-6:
                 continue
 
-            normalised_data[band_index, valid_pixels] = (
-                band[valid_pixels] - band_min
-            ) / (band_max - band_min)
+            normalised_data[band_index, non_cloud_pixels] = np.clip(
+                (band[non_cloud_pixels] - mean) / std,
+                -3.0,
+                3.0,
+            )
 
         profile = src.profile.copy()
         profile.update(driver="GTiff", dtype="float32")
@@ -42,7 +44,7 @@ def apply_normalisation(
     result: PreprocessingResult,
     request: PreprocessingRequest,
 ) -> PreprocessingResult:
-    """Normalise aligned or cloud-masked scenes to per-band values in [0, 1]."""
+    """Apply cloud-aware per-band Z-score normalisation clipped to [-3, 3]."""
 
     reference_source = result.reference_masked_path or result.reference_aligned_path
     target_source = result.target_masked_path or result.target_aligned_path
