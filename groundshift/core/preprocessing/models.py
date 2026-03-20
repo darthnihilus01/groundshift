@@ -13,7 +13,7 @@ class PreprocessingRequest:
     cloud_cover_threshold: float = 0.4
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class PreprocessingResult:
     """Outputs produced by the preprocessing workflow."""
 
