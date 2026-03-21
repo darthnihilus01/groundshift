@@ -116,6 +116,22 @@ groundshift puts it in the open. For researchers, journalists, NGOs, and develop
 
 ---
 
+
+## ✨ What's built
+
+* 🛰️ Sentinel-2 ingestion
+* ☁️ Cloud masking  
+* 📐 Co-registration
+* 🔍 Spectral NDVI detector
+* 📊 GeoJSON alerting + webhooks
+
+## 🗺️ What's coming
+
+* 🤖 BIT-CD deep learning backend
+* 📊 Anomaly scoring against seasonal baselines
+* 🖥️ Geospatial intelligence dashboard UI
+* 🇮🇳 ISRO data support
+
 ## 📄 License
 
 MIT — free to use, fork, and build on.
