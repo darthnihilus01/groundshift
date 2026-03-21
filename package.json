@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@types/mapbox-gl": "^3.4.1",
+    "axios": "^1.13.6",
+    "lucide-react": "^0.577.0",
+    "mapbox-gl": "^3.20.0",
+    "react-map-gl": "^8.1.0"
+  }
+}
