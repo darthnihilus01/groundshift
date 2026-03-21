@@ -4,8 +4,9 @@
 
 groundshift is an open-source Python framework that turns free satellite imagery into automated change alerts — deforestation, floods, construction, conflict damage, you name it. Built on real ESA Sentinel data, no satellite subscription needed.
 
-> 🚧 Early development — the vision is clear, the code is catching up. Contributions, ideas & collabs welcome!
-
+> 📊 Core pipeline complete — ingestion, preprocessing, detection 
+> and alerting layers built with 24 tests passing. 
+> UI dashboard in active development.
 ---
 
 ## 🌍 The Problem
