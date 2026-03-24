@@ -1,46 +1,96 @@
-import type { Alert, Watch } from '../types'
-
-type DetailSelection =
-  | { type: 'alert'; data: Alert }
-  | { type: 'watch'; data: Watch }
+import React from 'react';
+import { Alert } from '../types';
 
 interface DetailPanelProps {
-  selection: DetailSelection | null
-  onClose: () => void
+  alert: Alert;
+  onClose: () => void;
 }
 
-export default function DetailPanel({ selection, onClose }: DetailPanelProps) {
-  if (!selection) {
-    return null
-  }
+const DetailPanel: React.FC<DetailPanelProps> = ({ alert, onClose }) => {
+  const getScore = () => {
+    return alert.score ?? alert.change_score ?? 0;
+  };
 
-  const isAlert = selection.type === 'alert'
-  const alert = isAlert ? selection.data : null
-  const watch = !isAlert ? selection.data : null
+  const formatLocation = () => {
+    let location = alert.location;
+    if (alert.country) {
+      location += `, ${alert.country}`;
+    }
+    return location;
+  };
 
   return (
-    <section className="detail-panel panel">
-      <header className="detail-header">
-        <span className="panel-header">DETAIL PANEL</span>
-        <button type="button" className="close-btn" onClick={onClose}>
-          CLOSE
+    <div className="detail-panel">
+      <div className="detail-header">
+        <div className="detail-location">{formatLocation()}</div>
+        <button className="detail-close" onClick={onClose}>
+          ✕ DISMISS
         </button>
-      </header>
-      <div className="detail-grid mono">
-        <div>LOCATION</div>
-        <div>{alert?.location ?? 'N/A'}</div>
-        <div>CHANGE SCORE</div>
-        <div>{alert ? alert.change_score.toFixed(2) : watch?.threshold.toFixed(2) ?? 'N/A'}</div>
-        <div>PROBABLE CAUSE</div>
-        <div>{alert?.probable_cause ?? watch?.description ?? 'N/A'}</div>
-        <div>FIRED AT</div>
-        <div>{alert?.fired_at ?? watch?.created_at ?? 'N/A'}</div>
-        <div>WATCH NAME</div>
-        <div>{alert?.watch_name ?? watch?.name ?? 'N/A'}</div>
       </div>
-      <button type="button" className="action-btn export-btn">
-        EXPORT GEOJSON
-      </button>
-    </section>
-  )
-}
+
+      <div className="detail-body">
+        <div className="detail-col">
+          <div className="detail-row">
+            <span className="detail-label">SEVERITY</span>
+            <span className="detail-value">{(alert.severity ?? 'low').toUpperCase()}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">SCORE</span>
+            <span className="detail-value">{(getScore() * 100).toFixed(1)}%</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">CAUSE</span>
+            <span className="detail-value">{alert.cause ?? alert.probable_cause ?? 'NDVI LOSS'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">LATITUDE</span>
+            <span className="detail-value">{alert.latitude ?? '--'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">LONGITUDE</span>
+            <span className="detail-value">{alert.longitude ?? '--'}</span>
+          </div>
+        </div>
+
+        <div className="detail-col">
+          <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+            BEFORE IMAGE
+          </div>
+          {alert.before_image ? (
+            <img
+              src={alert.before_image}
+              alt="Before"
+              style={{
+                width: '100%',
+                aspectRatio: '1',
+                border: '1px solid var(--border-dim)',
+                backgroundColor: 'var(--bg-secondary)',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                aspectRatio: '1',
+                border: '1px solid var(--border-dim)',
+                backgroundColor: 'var(--bg-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-dim)',
+                fontSize: '10px',
+              }}
+            >
+              NO DATA
+            </div>
+          )}
+          <button className="detail-export-btn" style={{ marginTop: '6px', width: '100%' }}>
+            ⇩ EXPORT
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DetailPanel;

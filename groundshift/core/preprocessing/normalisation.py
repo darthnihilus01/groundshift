@@ -66,3 +66,4 @@ def apply_normalisation(
         reference_normalized_path=reference_normalized_path,
         target_normalized_path=target_normalized_path,
     )
+    

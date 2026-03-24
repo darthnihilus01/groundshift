@@ -1,101 +1,126 @@
-import { useEffect, useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react';
+import TopNav from './components/TopNav';
+import MapView from './components/MapView';
+import LeftPanel from './components/LeftPanel';
+import RightPanel from './components/RightPanel';
+import BottomBar from './components/BottomBar';
+import DetailPanel from './components/DetailPanel';
+import { TabType, Watch, Alert, LayerState } from './types';
 
-import AlertPanel from './components/AlertPanel'
-import DetailPanel from './components/DetailPanel'
-import MapView from './components/MapView'
-import WatchPanel from './components/WatchPanel'
-import type { Alert, LayerId, Watch } from './types'
+const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('tacmap');
+  const [watches, setWatches] = useState<Watch[]>([
+    {
+      id: '1',
+      name: 'BENGALURU NORTH',
+      threshold: 0.30,
+      active: true,
+    },
+    {
+      id: '2',
+      name: 'RONDÔNIA REGION',
+      threshold: 0.45,
+      active: true,
+    },
+  ]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [selectedWatch, setSelectedWatch] = useState<Watch | null>(null);
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [layers, setLayers] = useState<LayerState[]>([
+    { id: 'anomalies', label: 'ANOMALIES', active: true, count: 0 },
+    { id: 'flights', label: 'FLIGHTS', active: false, count: 0 },
+    { id: 'news', label: 'NEWS', active: false, count: 0 },
+  ]);
 
-type DetailSelection =
-  | { type: 'alert'; data: Alert }
-  | { type: 'watch'; data: Watch }
-  | null
-
-function App() {
-  const [selectedWatch, setSelectedWatch] = useState<Watch | null>(null)
-  const [selection, setSelection] = useState<DetailSelection>(null)
-  const [activeLayers, setActiveLayers] = useState<LayerId[]>(['anomalies'])
-  const [alerts, setAlerts] = useState<Alert[]>([])
-
+  // WebSocket connection for alerts
   useEffect(() => {
-    let mounted = true
-
-    const fetchAlerts = async () => {
+    const connectWebSocket = () => {
       try {
-        const response = await fetch('http://localhost:8000/api/alerts')
-        if (!response.ok) {
-          throw new Error('Failed to load alerts')
-        }
+        const ws = new WebSocket('ws://localhost:8000/ws/alerts');
+        
+        ws.onmessage = (event) => {
+          const alert = JSON.parse(event.data) as Alert;
+          setAlerts((prev) => [alert, ...prev]);
+        };
 
-        const data = (await response.json()) as Alert[]
-        if (mounted) {
-          setAlerts(data)
-        }
-      } catch {
-        if (mounted) {
-          setAlerts([])
-        }
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+
+        return () => {
+          ws.close();
+        };
+      } catch (error) {
+        console.error('Failed to connect to WebSocket:', error);
       }
-    }
+    };
 
-    fetchAlerts()
-    const pollId = window.setInterval(fetchAlerts, 15000)
+    const cleanup = connectWebSocket();
+    return cleanup;
+  }, []);
 
-    return () => {
-      mounted = false
-      window.clearInterval(pollId)
-    }
-  }, [])
+  const handleSelectAlert = useCallback((alert: Alert) => {
+    setSelectedAlert(alert);
+    setDetailPanelOpen(true);
+  }, []);
 
-  const handleWatchSelect = (watch: Watch) => {
-    setSelectedWatch(watch)
-    setSelection({ type: 'watch', data: watch })
-  }
+  const handleSelectWatch = useCallback((watch: Watch) => {
+    setSelectedWatch(watch);
+  }, []);
 
-  const handleAlertSelect = (alert: Alert) => {
-    setSelection({ type: 'alert', data: alert })
-  }
+  const handleToggleLayer = useCallback((layerId: string) => {
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === layerId ? { ...layer, active: !layer.active } : layer
+      )
+    );
+  }, []);
 
-  const toggleLayer = (layer: LayerId) => {
-    setActiveLayers((previous) =>
-      previous.includes(layer) ? previous.filter((item) => item !== layer) : [...previous, layer],
-    )
-  }
+  const handleAddArea = useCallback(() => {
+    // This will be handled later with a modal
+    alert('Add Area feature coming soon');
+  }, []);
 
   return (
-    <main className="dashboard-shell">
-      <section className="dashboard-main-row">
-        <WatchPanel selectedWatchId={selectedWatch?.id ?? null} onWatchSelect={handleWatchSelect} />
-        <section className="center-panel panel">
-          <div className="layer-toggle-bar">
-            {(['anomalies', 'flights', 'news'] as LayerId[]).map((layer) => {
-              const enabled = activeLayers.includes(layer)
-              return (
-                <button
-                  key={layer}
-                  type="button"
-                  className="layer-toggle-btn"
-                  style={{ color: enabled ? '#00ff88' : '#444444', borderColor: enabled ? '#00ff88' : '#444444' }}
-                  onClick={() => toggleLayer(layer)}
-                >
-                  {layer.toUpperCase()}
-                </button>
-              )
-            })}
-          </div>
-          <MapView
-            activeLayers={activeLayers}
-            alerts={alerts}
-            onCountryClick={(country) => {
-              console.info('Selected country', country)
-            }}
-          />
-        </section>
-        <AlertPanel onAlertSelect={handleAlertSelect} />
-      </section>
-      <DetailPanel selection={selection} onClose={() => setSelection(null)} />
-    </main>
-  )
-}
+    <div className="app-container">
+      <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      <div className="main-content">
+        <LeftPanel
+          watches={watches}
+          selectedWatch={selectedWatch}
+          onSelectWatch={handleSelectWatch}
+          onAddArea={handleAddArea}
+        />
+        
+        <div className="center-panel">
+          <MapView />
+        </div>
+        
+        <RightPanel
+          alerts={alerts}
+          selectedAlert={selectedAlert}
+          onSelectAlert={handleSelectAlert}
+        />
+      </div>
 
-export default App
+      <BottomBar
+        layers={layers}
+        onToggleLayer={handleToggleLayer}
+      />
+
+      {detailPanelOpen && selectedAlert && (
+        <DetailPanel
+          alert={selectedAlert}
+          onClose={() => {
+            setDetailPanelOpen(false);
+            setSelectedAlert(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default App;
