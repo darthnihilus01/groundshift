@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from '../types';
+import type { Alert } from '../types';
 
 interface RightPanelProps {
   alerts: Alert[];
@@ -57,9 +57,16 @@ const RightPanel: React.FC<RightPanelProps> = ({
             return (
               <div
                 key={alert.id}
-                className={`alert-card ${getSeverityClass(severity)}`}
+                className={`alert-card ${getSeverityClass(severity)} ${selectedAlert?.id === alert.id ? 'selected' : ''}`}
                 onClick={() => onSelectAlert(alert)}
-                style={{ borderColor: `var(--${severity === 'critical' ? 'red' : severity === 'moderate' ? 'orange' : 'yellow'}-${severity === 'critical' ? 'critical' : severity === 'moderate' ? 'alert' : 'objective'})` }}
+                style={{
+                  borderColor:
+                    severity === 'critical'
+                      ? 'var(--red-critical)'
+                      : severity === 'moderate'
+                        ? 'var(--orange-alert)'
+                        : 'var(--yellow-objective)',
+                }}
               >
                 <div className="alert-card-header">
                   <div className="alert-severity">

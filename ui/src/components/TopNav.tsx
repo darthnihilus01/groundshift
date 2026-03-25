@@ -1,5 +1,6 @@
 import React from 'react';
-import { TabType } from '../types';
+import { useEffect, useState } from 'react';
+import type { TabType } from '../types';
 
 interface TopNavProps {
   activeTab: TabType;
@@ -7,6 +8,7 @@ interface TopNavProps {
 }
 
 const TopNav: React.FC<TopNavProps> = ({ activeTab, onTabChange }) => {
+  const [utcTime, setUtcTime] = useState('00:00:00');
   const tabs: { id: TabType; label: string }[] = [
     { id: 'tacmap', label: 'TACMAP' },
     { id: 'watches', label: 'WATCHES' },
@@ -14,17 +16,26 @@ const TopNav: React.FC<TopNavProps> = ({ activeTab, onTabChange }) => {
     { id: 'database', label: 'DATABASE' },
   ];
 
-  const now = new Date();
-  const utcTime = now.toLocaleTimeString('en-US', { 
-    hour12: false, 
-    hour: '2-digit', 
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: 'UTC'
-  });
+  useEffect(() => {
+    const update = () => {
+      setUtcTime(
+        new Date().toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          timeZone: 'UTC',
+        }),
+      );
+    };
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="top-nav">
+      <div className="nav-keycap">[Q]</div>
       <div className="logo-box">GS</div>
       
       <div className="nav-tabs">
@@ -41,8 +52,10 @@ const TopNav: React.FC<TopNavProps> = ({ activeTab, onTabChange }) => {
 
       <div className="status-area">
         <div className="utc-clock">{utcTime} UTC</div>
+        <span className="top-status-label">SYS</span>
         <div className="status-dot"></div>
       </div>
+      <div className="nav-keycap">[E]</div>
     </div>
   );
 };

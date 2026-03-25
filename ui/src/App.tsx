@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TopNav from './components/TopNav';
 import MapView from './components/MapView';
 import LeftPanel from './components/LeftPanel';
 import RightPanel from './components/RightPanel';
 import BottomBar from './components/BottomBar';
 import DetailPanel from './components/DetailPanel';
-import { TabType, Watch, Alert, LayerState } from './types';
+import type { Alert, LayerId, TabType, Watch } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('tacmap');
-  const [watches, setWatches] = useState<Watch[]>([
+  const [activeLayers, setActiveLayers] = useState<LayerId[]>(['anomalies']);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const watches = useMemo<Watch[]>(() => [
     {
       id: '1',
       name: 'BENGALURU NORTH',
@@ -22,16 +25,19 @@ const App: React.FC = () => {
       threshold: 0.45,
       active: true,
     },
+  ], []);
+  const [alerts, setAlerts] = useState<Alert[]>([
+    {
+      id: 'seed-1',
+      severity: 'critical',
+      score: 0.71,
+      location: 'RONDONIA',
+      country: 'BRAZIL',
+      cause: 'NDVI LOSS',
+      timestamp: new Date().toISOString(),
+    },
   ]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [selectedWatch, setSelectedWatch] = useState<Watch | null>(null);
-  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
-  const [layers, setLayers] = useState<LayerState[]>([
-    { id: 'anomalies', label: 'ANOMALIES', active: true, count: 0 },
-    { id: 'flights', label: 'FLIGHTS', active: false, count: 0 },
-    { id: 'news', label: 'NEWS', active: false, count: 0 },
-  ]);
 
   // WebSocket connection for alerts
   useEffect(() => {
@@ -40,7 +46,22 @@ const App: React.FC = () => {
         const ws = new WebSocket('ws://localhost:8000/ws/alerts');
         
         ws.onmessage = (event) => {
-          const alert = JSON.parse(event.data) as Alert;
+          const payload = JSON.parse(event.data) as Partial<Alert>;
+          const alert: Alert = {
+            id: payload.id ?? crypto.randomUUID(),
+            severity: payload.severity ?? 'low',
+            score: payload.score ?? payload.change_score ?? 0,
+            change_score: payload.change_score,
+            location: payload.location ?? 'UNKNOWN',
+            country: payload.country,
+            cause: payload.cause ?? payload.probable_cause ?? 'NDVI LOSS',
+            timestamp: payload.timestamp ?? payload.fired_at ?? new Date().toISOString(),
+            fired_at: payload.fired_at,
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            before_image: payload.before_image,
+            after_image: payload.after_image,
+          };
           setAlerts((prev) => [alert, ...prev]);
         };
 
@@ -62,18 +83,16 @@ const App: React.FC = () => {
 
   const handleSelectAlert = useCallback((alert: Alert) => {
     setSelectedAlert(alert);
-    setDetailPanelOpen(true);
+    setSelectedCountry(alert.country ?? null);
   }, []);
 
   const handleSelectWatch = useCallback((watch: Watch) => {
     setSelectedWatch(watch);
   }, []);
 
-  const handleToggleLayer = useCallback((layerId: string) => {
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId ? { ...layer, active: !layer.active } : layer
-      )
+  const handleToggleLayer = useCallback((layerId: LayerId) => {
+    setActiveLayers((prev) =>
+      prev.includes(layerId) ? prev.filter((id) => id !== layerId) : [...prev, layerId],
     );
   }, []);
 
@@ -95,7 +114,13 @@ const App: React.FC = () => {
         />
         
         <div className="center-panel">
-          <MapView />
+          <MapView
+            selectedCountry={selectedCountry}
+            onCountrySelect={(country) => {
+              setSelectedCountry(country);
+              setSelectedAlert(null);
+            }}
+          />
         </div>
         
         <RightPanel
@@ -106,16 +131,22 @@ const App: React.FC = () => {
       </div>
 
       <BottomBar
-        layers={layers}
+        activeLayers={activeLayers}
+        counts={{
+          flights: 0,
+          anomalies: alerts.length,
+          news: 0,
+        }}
         onToggleLayer={handleToggleLayer}
       />
 
-      {detailPanelOpen && selectedAlert && (
+      {(selectedAlert || selectedCountry) && (
         <DetailPanel
           alert={selectedAlert}
+          country={selectedCountry}
           onClose={() => {
-            setDetailPanelOpen(false);
             setSelectedAlert(null);
+            setSelectedCountry(null);
           }}
         />
       )}

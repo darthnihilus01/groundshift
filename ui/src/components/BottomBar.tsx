@@ -1,31 +1,30 @@
 import React from 'react';
-import { LayerState } from '../types';
+import type { LayerId } from '../types';
 
 interface BottomBarProps {
-  layers: LayerState[];
-  onToggleLayer: (layerId: string) => void;
+  activeLayers: LayerId[];
+  counts: Record<LayerId, number>;
+  onToggleLayer: (layerId: LayerId) => void;
 }
 
-const BottomBar: React.FC<BottomBarProps> = ({ layers, onToggleLayer }) => {
-  const now = new Date();
-  const utcTime = now.toLocaleTimeString('en-US', { 
-    hour12: false, 
-    hour: '2-digit', 
-    minute: '2-digit',
-    timeZone: 'UTC'
-  });
+const BottomBar: React.FC<BottomBarProps> = ({ activeLayers, counts, onToggleLayer }) => {
+  const layerMeta: Array<{ id: LayerId; icon: string; label: string }> = [
+    { id: 'flights', icon: '✈', label: 'FLIGHTS' },
+    { id: 'anomalies', icon: '📡', label: 'ANOMALIES' },
+    { id: 'news', icon: '📰', label: 'NEWS' },
+  ];
 
   return (
     <div className="bottom-bar">
       <div className="bottom-bar-section">
-        {layers.map((layer) => (
+        {layerMeta.map((layer) => (
           <button
             key={layer.id}
-            className={`layer-toggle ${layer.active ? 'active' : ''}`}
+            className={`layer-toggle ${activeLayers.includes(layer.id) ? 'active' : ''}`}
             onClick={() => onToggleLayer(layer.id)}
             title={`Toggle ${layer.label}`}
           >
-            {layer.label}: {layer.count ?? 0}
+            {layer.icon} {layer.label}: {counts[layer.id] ?? 0}
           </button>
         ))}
       </div>

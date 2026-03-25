@@ -1,5 +1,5 @@
 import React from 'react';
-import { Watch } from '../types';
+import type { Watch } from '../types';
 
 interface LeftPanelProps {
   watches: Watch[];

@@ -1,17 +1,27 @@
 import React from 'react';
-import { Alert } from '../types';
+import type { Alert } from '../types';
 
 interface DetailPanelProps {
-  alert: Alert;
+  alert: Alert | null;
+  country: string | null;
   onClose: () => void;
 }
 
-const DetailPanel: React.FC<DetailPanelProps> = ({ alert, onClose }) => {
+const DetailPanel: React.FC<DetailPanelProps> = ({ alert, country, onClose }) => {
+  const fallbackLocation = country ?? 'UNKNOWN';
+
   const getScore = () => {
+    if (!alert) {
+      return 0;
+    }
     return alert.score ?? alert.change_score ?? 0;
   };
 
   const formatLocation = () => {
+    if (!alert) {
+      return fallbackLocation;
+    }
+
     let location = alert.location;
     if (alert.country) {
       location += `, ${alert.country}`;
@@ -32,7 +42,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ alert, onClose }) => {
         <div className="detail-col">
           <div className="detail-row">
             <span className="detail-label">SEVERITY</span>
-            <span className="detail-value">{(alert.severity ?? 'low').toUpperCase()}</span>
+            <span className="detail-value">{(alert?.severity ?? 'low').toUpperCase()}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">SCORE</span>
@@ -40,15 +50,15 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ alert, onClose }) => {
           </div>
           <div className="detail-row">
             <span className="detail-label">CAUSE</span>
-            <span className="detail-value">{alert.cause ?? alert.probable_cause ?? 'NDVI LOSS'}</span>
+            <span className="detail-value">{alert?.cause ?? alert?.probable_cause ?? 'REGIONAL SUMMARY'}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">LATITUDE</span>
-            <span className="detail-value">{alert.latitude ?? '--'}</span>
+            <span className="detail-value">{alert?.latitude ?? '--'}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">LONGITUDE</span>
-            <span className="detail-value">{alert.longitude ?? '--'}</span>
+            <span className="detail-value">{alert?.longitude ?? '--'}</span>
           </div>
         </div>
 
@@ -56,7 +66,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ alert, onClose }) => {
           <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
             BEFORE IMAGE
           </div>
-          {alert.before_image ? (
+          {alert?.before_image ? (
             <img
               src={alert.before_image}
               alt="Before"
