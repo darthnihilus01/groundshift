@@ -21,6 +21,10 @@ from groundshift.core.detection.spectral import SpectralDetector
 # New scene-based async detection
 from groundshift.core.detection.async_base import AsyncDetector
 from groundshift.core.detection.async_service import AsyncDetectionService
+from groundshift.core.detection.data_loader import (
+    DataLoadError,
+    PreprocessedDataLoader,
+)
 from groundshift.core.detection.models_v2 import (
     AnomalyScore,
     CompositeDetectionResult,
@@ -45,11 +49,13 @@ __all__ = [
     "AsyncDetectionService",
     "AnomalyScore",
     "CompositeDetectionResult",
+    "DataLoadError",
     "DetectionInput",
     "DetectionMethod",
     "DetectionResultV2",
     "DetectorRegistry",
-    "TemporalDetector",
-    "SpatialDetector",
     "HistoricalDetector",
+    "PreprocessedDataLoader",
+    "SpatialDetector",
+    "TemporalDetector",
 ]
