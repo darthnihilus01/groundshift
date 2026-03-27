@@ -17,6 +17,10 @@ from groundshift.core.detection.models_v2 import (
     DetectionResult,
 )
 from groundshift.core.detection.utils import normalize_ndvi, clip_to_confidence
+import numpy as np
+
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -77,10 +81,23 @@ class TemporalDetector(AsyncDetector):
 
             # Compute NDVI delta (absolute change)
             ndvi_delta = abs(current_ndvi - prior_ndvi)
+            delta  = current_ndvi - prior_ndvi
+            mean = np.mean(delta)
+            std = np.std(delta)
+            if std == 0: 
+                return DetectionResult(
+                    method=DetectionMethod.TEMPORAL,
+                    anomalies=[],
+                    processing_time_ms=0,
+                    status="insufficient_data",
+                    error_msg="No variation in NDVI delta",
+                )
+            
+            z_map = np.abs((delta - mean) / std)
 
             # Threshold
-            threshold = self.config.get("threshold", 0.3)
-            is_anomalous = ndvi_delta > threshold
+            z_threshold = self.config.get("threshold", 3.0)
+            is_anomalous = z_map > z_threshold
             anomaly_frac = float(is_anomalous.mean())
 
             # Create score
@@ -89,7 +106,7 @@ class TemporalDetector(AsyncDetector):
                     AnomalyScore(
                         method=DetectionMethod.TEMPORAL,
                         score=clip_to_confidence(anomaly_frac),
-                        explanation=f"NDVI delta > {threshold:.2f} ({anomaly_frac*100:.1f}% pixels)",
+                        explanation = f"Z-score > {z_threshold} ({anomaly_frac*100:.1f}% pixels show abnormal change"
                     )
                 ]
             else:
