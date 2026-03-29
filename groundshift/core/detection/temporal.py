@@ -80,7 +80,7 @@ class TemporalDetector(AsyncDetector):
                 )
 
             # Compute NDVI delta (absolute change)
-            ndvi_delta = abs(current_ndvi - prior_ndvi)
+            
             delta  = current_ndvi - prior_ndvi
             mean = np.mean(delta)
             std = np.std(delta)
@@ -96,7 +96,7 @@ class TemporalDetector(AsyncDetector):
             z_map = np.abs((delta - mean) / std)
 
             # Threshold
-            z_threshold = self.config.get("threshold", 3.0)
+            z_threshold = self.config.get("z_threshold", 3.0)
             is_anomalous = z_map > z_threshold
             anomaly_frac = float(is_anomalous.mean())
 
@@ -106,7 +106,7 @@ class TemporalDetector(AsyncDetector):
                     AnomalyScore(
                         method=DetectionMethod.TEMPORAL,
                         score=clip_to_confidence(anomaly_frac),
-                        explanation = f"Z-score > {z_threshold} ({anomaly_frac*100:.1f}% pixels show abnormal change"
+                       explanation = f"Z-score > {z_threshold} ({anomaly_frac*100:.1f}% pixels show abnormal change)"
                     )
                 ]
             else:
