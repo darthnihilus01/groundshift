@@ -85,32 +85,40 @@ class TemporalDetector(AsyncDetector):
             
             delta  = current_ndvi - prior_ndvi
             delta_smooth = gaussian_filter(delta, sigma=1)  # smooth to reduce noise
-            mean = np.mean(delta)
-            std = np.std(delta) + 1e+6  # avoid division by zero
-            if std == 0: 
-                return DetectionResult(
-                    method=DetectionMethod.TEMPORAL,
-                    anomalies=[],
-                    processing_time_ms=0,
-                    status="insufficient_data",
-                    error_msg="No variation in NDVI delta",
-                )
+            mean = np.mean(delta_smooth)
+            std = np.std(delta_smooth) + 1e-6
+            median  = np.median(delta_smooth)
             
-            z_map = np.abs((delta - mean) / std)
+         
+        
+            z_map = np.abs((delta_smooth - median) / std)
 
             # Threshold
-            z_threshold = self.config.get("z_threshold", 3.0)
+            z_threshold = getattr(self, "config", {}).get("z_threshold", 3.0)
+            z_map = np.clip(z_map, 0, 10)  # cap z-scores for stability
             is_anomalous = z_map > z_threshold
             anomaly_frac = float(is_anomalous.mean())
+            logger.info(f"[TEMPORAL] anomaly_frac={anomaly_frac:.4f}"
+                        f"z_threshold= {z_threshold}"
+                          )
+
+            min_area = getattr(self, "config", {}).get("min_anomaly_fraction", 0.01)
+       
+
+
 
             # Create score
-            if anomaly_frac > 0.01:  # > 1% anomalous pixels
+            if anomaly_frac > min_area:     
                 anomalies = [
                     AnomalyScore(
                         method=DetectionMethod.TEMPORAL,
                         score=clip_to_confidence(anomaly_frac),
-                       explanation = f"Z-score > {z_threshold} ({anomaly_frac*100:.1f}% pixels show abnormal change)"
-                    )
+                       explanation = (
+                           f"Temporal anomaly detected:" 
+                           f"{anomaly_frac:.2%} of pixels exceed z>{z_threshold}"
+
+                           f"mean ΔNDVI={mean:.3f}"
+                       )
                 ]
             else:
                 anomalies = []
@@ -140,7 +148,7 @@ class TemporalDetector(AsyncDetector):
         In production: query scene archive.
         """
         # Add random noise to simulate temporal variation
-        import numpy as np
+      
 
         noise = np.random.normal(0, 0.05, current_ndvi.shape)
         return np.clip(current_ndvi + noise, -1, 1)
