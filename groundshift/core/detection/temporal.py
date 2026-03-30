@@ -18,6 +18,8 @@ from groundshift.core.detection.models_v2 import (
 )
 from groundshift.core.detection.utils import normalize_ndvi, clip_to_confidence
 import numpy as np
+from scipy.ndimage import gaussian_filter
+
 
 
 
@@ -82,8 +84,9 @@ class TemporalDetector(AsyncDetector):
             # Compute NDVI delta (absolute change)
             
             delta  = current_ndvi - prior_ndvi
+            delta_smooth = gaussian_filter(delta, sigma=1)  # smooth to reduce noise
             mean = np.mean(delta)
-            std = np.std(delta)
+            std = np.std(delta) + 1e+6  # avoid division by zero
             if std == 0: 
                 return DetectionResult(
                     method=DetectionMethod.TEMPORAL,
